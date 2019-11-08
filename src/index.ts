@@ -1,6 +1,6 @@
 import { Application, Context } from 'probot';
 
-import { backportImpl, labelMergedPR } from './utils';
+import { backportImpl, labelMergedPR, defaultBranch } from './utils';
 import { labelToTargetBranch } from './utils/label-utils';
 import { PullRequest, TropConfig } from './Probot';
 import { CHECK_PREFIX } from './constants';
@@ -120,14 +120,15 @@ PR is no longer targeting this branch for a backport',
     ],
     async (context: Context) => {
       const oldPRNumber = maybeGetManualBackportNumber(context);
+      const config = await context.config<TropConfig>('config.yml') as TropConfig;
 
       // only check for manual backports when a new PR is opened or if the PR body is edited
       if (oldPRNumber && ['opened', 'edited'].includes(context.payload.action)) {
         await updateManualBackport(context, PRChange.OPEN, oldPRNumber);
       }
 
-      // Check if the PR is going to master, if it's not check if it's correctly
-      // tagged as a backport of a PR that has already been merged into master
+      // Check if the PR is going to the default branch, if it's not check if it's correctly
+      // tagged as a backport of a PR that has already been merged into the default branch
       const pr = context.payload.pull_request;
       const { data: allChecks } = await context.github.checks.listForRef(context.repo({
         ref: pr.head.sha,
@@ -135,7 +136,7 @@ PR is no longer targeting this branch for a backport',
       }));
       let checkRun = allChecks.check_runs.find(run => run.name === VALID_BACKPORT_CHECK_NAME);
 
-      if (pr.base.ref !== 'master') {
+      if (pr.base.ref !== defaultBranch(context)) {
         if (!checkRun) {
           checkRun = (await context.github.checks.create(context.repo({
             name: VALID_BACKPORT_CHECK_NAME,
@@ -168,9 +169,9 @@ PR is no longer targeting this branch for a backport',
             number: oldPRNumber,
           }))).data;
 
-          // The target PR is only "good" if it was merged to master
-          if (oldPR.base.ref !== 'master') {
-            failureCause = 'the PR that it is backporting was not targeting the master branch.';
+          // The target PR is only "good" if it was merged to the default branch
+          if (oldPR.base.ref !== defaultBranch(context)) {
+            failureCause = 'the PR that it is backporting was not targeting the default branch.';
           } else if (!oldPR.merged) {
             failureCause = 'the PR that is backporting has not been merged yet.';
           }
@@ -186,7 +187,7 @@ PR is no longer targeting this branch for a backport',
             details_url: 'https://github.com/electron/trop/blob/master/docs/manual-backports.md',
             output: {
               title: 'Valid Backport',
-              summary: `This PR is declared as backporting "#${oldPRNumber}" which is a valid PR that has been merged into master`,
+              summary: `This PR is declared as backporting "#${oldPRNumber}" which is a valid PR that has been merged into ${defaultBranch(context)}`,
             },
           }));
         } else {
@@ -212,7 +213,7 @@ PR is no longer targeting this branch for a backport',
           completed_at: (new Date()).toISOString(),
           output: {
             title: 'Cancelled',
-            summary: 'This PR is targeting `master` and is not a backport',
+            summary: `This PR is targeting ${defaultBranch(context)} and is not a backport`,
             annotations: [],
           },
         }));

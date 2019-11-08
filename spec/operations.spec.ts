@@ -29,6 +29,7 @@ describe('runner', () => {
         githubHost: 'github.com',
         slug: 'electron/trop',
         accessToken: '',
+        defaultBranch: 'master',
       }));
       expect(await fs.pathExists(dir)).toBe(true);
       expect(await fs.pathExists(path.resolve(dir, '.git'))).toBe(true);
@@ -39,6 +40,7 @@ describe('runner', () => {
         githubHost: 'github.com',
         slug: 'electron/this-is-not-trop',
         accessToken: '',
+        defaultBranch: 'master',
       })).rejects.toBeTruthy();
     });
   });

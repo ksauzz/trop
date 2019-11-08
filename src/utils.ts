@@ -19,6 +19,10 @@ import { getRepoToken } from './utils/token-util';
 const makeQueue: IQueue = require('queue');
 const { parse: parseDiff } = require('what-the-diff');
 
+export const defaultBranch = (context: Context) => {
+  return context.payload.repository.default_branch || 'master';
+};
+
 export const labelMergedPR = async (context: Context, pr: PullRequest, targetBranch: String) => {
   const prMatch = pr.body.match(/#[0-9]{1,7}/);
   if (prMatch && prMatch[0]) {
@@ -96,8 +100,8 @@ export const backportImpl = async (robot: Application,
       const repoAccessToken = await getRepoToken(robot, context);
 
       // use GHE_HOST
-      const githubHost = process.env.GHE_HOST || "github.com";
-      const githubAPIBaseUrl = process.env.GHE_HOST ? `https://${process.env.GHE_HOST}/api/v3` : "https://api.github.com";
+      const githubHost = process.env.GHE_HOST || 'github.com';
+      const githubAPIBaseUrl = process.env.GHE_HOST ? `https://${process.env.GHE_HOST}/api/v3` : 'https://api.github.com';
       const pr = context.payload.pull_request as any as PullRequest;
       // Set up empty repo on master
       log('Setting up local repository');
@@ -105,6 +109,7 @@ export const backportImpl = async (robot: Application,
         githubHost,
         slug,
         accessToken: repoAccessToken,
+        defaultBranch: defaultBranch(context),
       });
       createdDir = dir;
       log(`Working directory cleaned: ${dir}`);

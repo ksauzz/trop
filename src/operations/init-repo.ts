@@ -10,6 +10,7 @@ export interface InitRepoOptions {
   githubHost: string;
   slug: string;
   accessToken: string;
+  defaultBranch: string;
 }
 
 /*
@@ -18,7 +19,7 @@ export interface InitRepoOptions {
 * @param {InitRepoOptions} repo and payload for repo initialization
 * @returns {Object} - an object containing the repo initialization directory
 */
-export const initRepo = async ({ githubHost, slug, accessToken }: InitRepoOptions) => {
+export const initRepo = async ({ githubHost, slug, accessToken, defaultBranch }: InitRepoOptions) => {
   await fs.mkdirp(path.resolve(baseDir, slug));
   const prefix = path.resolve(baseDir, slug, 'job-');
   const dir = await fs.mkdtemp(prefix);
@@ -43,7 +44,7 @@ export const initRepo = async ({ githubHost, slug, accessToken }: InitRepoOption
     await fs.remove(path.resolve(dir, file));
   }
 
-  await git.checkout('master');
+  await git.checkout(defaultBranch);
   await git.pull();
   await git.addConfig('user.email', config.tropEmail || 'trop@example.com');
   await git.addConfig('user.name', config.tropName || 'Trop Bot');
